@@ -1,6 +1,7 @@
 #!/usr/bin/python3
 
 import sys
+import RPi.GPIO as GPIO
 
 #if I can get graph working
 import matplotlib.pyplot as plt
@@ -13,6 +14,9 @@ from PyQt5.QtWidgets import QApplication, QWidget, QMainWindow
 
 #connecting ui that was mostly generated to this program in project1.py
 from project1_ui import Ui_MainWindow
+
+#Pin Definitions:
+data_pin = 4
 
 class Project1Program(Ui_MainWindow):
     def __init__(self, window):
@@ -36,21 +40,36 @@ class Project1Program(Ui_MainWindow):
             self.pushButton_update.setVisible(1)
             self.label_temp.setVisible(1)
             self.label_hum.setVisible(1)
-            self.textEdit_tempvalue.setVisible(1)
-            self.textEdit_humvalue.setVisible(1)
+            self.lineEdit_tempvalue.setVisible(1)
+            self.lineEdit_humvalue.setVisible(1)
     
-    def update_temp_n_hum(self):
-        #Check if sensor is connected ????
+    def update_temp_n_hum(self):   
+        self.label_nocon.setStyleSheet('color: orange') 
+        self.label_nocon.setText("Updating...") 
+        self.label_nocon.setVisible(1)
+        self.label_nocon.repaint()
+        
+        h,t = dht.read_retry(dht.DHT22, data_pin)
         
         #if connected, get reading from sensor
-        h,t = dht.read_retry(dht.DHT22, 4)
-        
-        #convert to Fahrenheit
-        t = t * 9/5.0 + 32
-        
-        #put output onto screen in temp and hum value label/txt boxes
-        self.lineEdit_tempvalue.text(t)
-        self.lineEdit_humvalue.text(h)
+        if h is not None and t is not None:
+            self.label_nocon.setVisible(0)
+            
+            #convert to Fahrenheit
+            t = t * 9/5.0 + 32
+            
+            #create string value of h and t
+            temp = "%0.1f" % t
+            hum  = "%0.1f" % h
+            
+            #put output onto screen in temp and hum value label/txt boxes
+            self.lineEdit_tempvalue.setText(temp)
+            self.lineEdit_humvalue.setText(hum)
+        else:
+            self.label_nocon.setStyleSheet('color: red')
+            self.label_nocon.setText("Sensor NOT connected")
+            self.label_nocon.setVisible(1)
+            
 
 if __name__ == '__main__':
     app = QtWidgets.QApplication(sys.argv)
@@ -62,39 +81,3 @@ if __name__ == '__main__':
     sys.exit(app.exec())
 
 
-###if __name__ == '__main__':
-###    app = QApplication(sys.argv)
-###    window = QWidget()
-###    window.resize(250, 150)
-###    window.move(300, 300)
-###    window.setWindowTitle('Simple')
-###    window.show()
-###    
-###    sys.exit(app.exec_())
-###
-
-### getting Adafruit_DHT library and renaming to dht for purposes of this program
-##import Adafruit_DHT as dht
-##    
-###using Adafruit_DHT function to read the data coming from GPIO pin 4 of the raspberry pi
-##h,t = dht.read_retry(dht.DHT22, 4)
-##
-###Out of subprocess (no longer need to be in home directory)
-###changing the temperature to Fahrenheit
-##t = t * 9/5.0 + 32
-##    
-###printing Temp and Humidity output to terminal
-##print('Temp={0:0.1f}*F  Humidity={1:0.1f}%'.format(t, h))
-
-
-###SAVE FOR WHEN NEEDING TO REGENERATE THE GUI
-
-###if __name__ == "__main__":
-###    import sys
-###    app = QtWidgets.QApplication(sys.argv)
-###    MainWindow = QtWidgets.QMainWindow()
-###    ui = Ui_MainWindow()
-###    ui.setupUi(MainWindow)
-###    MainWindow.show()
-###    
-###    sys.exit(app.exec_())
