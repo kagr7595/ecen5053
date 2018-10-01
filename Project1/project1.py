@@ -11,8 +11,10 @@ import Adafruit_DHT as dht
 
 from PyQt5 import QtCore, QtGui, QtWidgets
 from PyQt5.QtWidgets import QApplication, QWidget, QMainWindow
+from PyQt5.QtCore import QDate, QTime, QDateTime, Qt
 
 #connecting ui that was mostly generated to this program in project1.py
+# Used [3] as a general reference for pyqt
 from project1_ui import Ui_MainWindow
 
 #Pin Definitions:
@@ -31,7 +33,7 @@ class Project1Program(Ui_MainWindow):
         txt = self.lineEdit_password.text()
         password = "kathy"
         if password == txt:
-            #Set Visibility for password related information to 0
+            #Set Visibility for password related information to 0 / Used [2] for reference
             self.pushButton_password.setVisible(0)
             self.lineEdit_password.setVisible(0)
             self.label_password.setVisible(0)
@@ -48,7 +50,8 @@ class Project1Program(Ui_MainWindow):
         self.label_nocon.setText("Updating...") 
         self.label_nocon.setVisible(1)
         self.label_nocon.repaint()
-        
+
+        #Used Adafruit Example[5]
         h,t = dht.read_retry(dht.DHT22, data_pin)
         
         #if connected, get reading from sensor
@@ -65,7 +68,15 @@ class Project1Program(Ui_MainWindow):
             #put output onto screen in temp and hum value label/txt boxes
             self.lineEdit_tempvalue.setText(temp)
             self.lineEdit_humvalue.setText(hum)
+
+            #get current datetime / Used [6] for reference
+            datetime = QDateTime.currentDateTime()
+            
+            #output datetime
+            self.label_updatetime.setText("Last Updated: " + datetime.toString(Qt.DefaultLocaleLongDate))
+            self.label_updatetime.setVisible(1)
         else:
+            #Show Sensor NOT Connected Warning
             self.label_nocon.setStyleSheet('color: red')
             self.label_nocon.setText("Sensor NOT connected")
             self.label_nocon.setVisible(1)

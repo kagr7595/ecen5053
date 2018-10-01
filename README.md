@@ -7,5 +7,5 @@ Name: Kathy Grimes
 - General Project Description
 - Project Requirements
 - Project Additions
-- Install Instructions
+- Project Run Instructions
 - Citations 

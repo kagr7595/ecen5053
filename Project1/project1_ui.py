@@ -69,6 +69,15 @@ class Ui_MainWindow(object):
         self.label_nocon.setObjectName("label_nocon")
         self.label_nocon.setVisible(0)
         
+        font = QtGui.QFont()
+        font.setFamily("DejaVu Math TeX Gyre")
+        font.setPointSize(8)
+        self.label_updatetime = QtWidgets.QLabel(self.centralwidget)
+        self.label_updatetime.setGeometry(QtCore.QRect(10, 160, 400, 20))
+        self.label_updatetime.setFont(font)
+        self.label_updatetime.setObjectName("label_updatetime")
+        self.label_updatetime.setVisible(0)
+        
         MainWindow.setCentralWidget(self.centralwidget)
         self.menubar = QtWidgets.QMenuBar(MainWindow)
         self.menubar.setGeometry(QtCore.QRect(0, 0, 450, 22))

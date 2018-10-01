@@ -37,13 +37,14 @@ The DHT22 must have a 10kOhm resistor connected to pins 1 and 2
 
 
 ####Project Additions
-1. Login Screen -- use password 'kathy'
+1. Password Screen -- use password 'kathy'
 
 
-####Install Instructions
+####Project Run Instructions
 git clone https://github.com/kagr7595/ecen5053
 cd ecen5053/Project1
 python3 project1.py  #If any errors occur, please make sure to resolve the required software first
+#In UI, please use 'kathy' as the password
 
 
 ####Citations
