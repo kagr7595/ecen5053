@@ -60,6 +60,7 @@ cd ecen5053/Project2
 cd server
 ifconfig #Get your host ip -- you will need to enter it on the client side
 
+#Do terminal 1 then terminal 2 instructions
 #Terminal 1
 python3 project2.py  #If any errors occur, please make sure to resolve the required software first
 #In UI, please use 'kathy' as the password
@@ -71,6 +72,7 @@ python3 server.py
 cd client
 #Use browser of your choice -- I used chromium-browser
 chromium-browser client_socket.html &
+#type in your host ip in the host spot and click open
 
 
 ####Citations
