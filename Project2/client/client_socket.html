@@ -1,7 +1,7 @@
 <!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
 <html>
   <head>
-    <title>WebSockets Hello World</title>
+    <title>Data Server</title>
     <meta charset="utf-8" />
     <style type="text/css">
       body {
@@ -17,12 +17,21 @@
         $("div#terminal").prepend("</br>" +data);
         console.log(data);
       };
- 
+      
       $(document).ready(function () {
+        $("div#error_details").hide()
         $("div#message_details").hide()
+        $("div#message_details1").hide()
+        $("div#message_details2").hide()
+        $("div#message_details3").hide()
+        $("div#message_details4").hide()
+        $("div#message_details5").hide()
+        $("div#message_details6").hide()
+        $("div#message_details7").hide()
  
         var ws;
- 
+
+        //Used [7][15] in general
         $("#open").click(function(evt) {
           evt.preventDefault();
  
@@ -35,8 +44,73 @@
            
           // Handle incoming websocket message callback
           ws.onmessage = function(evt) {
-            log("Message Received: " + evt.data)
-            alert("message received: " + evt.data);
+            //Converting string to json format [14]
+            var msg = JSON.parse(evt.data);
+            
+            //switch case statement to decode what type of information the message received includes
+            switch(msg.type) {
+      	      case "current_temp_f":
+      	        var data = msg.data;
+                var time = msg.time;
+                //Special data sent if sensor is disconnected
+                if(data != "-5000.0") {
+                  document.getElementById("message").value = data;
+                  document.getElementById("label_time").innerHTML = time;
+                  $("div#error_details").hide();
+                } else {                  
+                  $("div#error_details").show();
+                }
+      	        break;
+      	      case "current_hum":
+      	        var data = msg.data;
+                var time = msg.time;
+                if(data != "-5000.0") {
+                  document.getElementById("message1").value = data;
+                  document.getElementById("label_time1").innerHTML = time;
+                  $("div#error_details").hide();
+                } else {                  
+                  $("div#error_details").show();
+                }
+      	        break;
+      	      case "lowest_temp_f":
+      	        var data = msg.data;
+                var time = msg.time;
+                document.getElementById("message2").value = data;
+                //Change label text[13]
+                document.getElementById("label_time2").innerHTML = time;
+      	        break;
+      	      case "lowest_hum":
+      	        var data = msg.data;
+                var time = msg.time;
+                document.getElementById("message3").value = data;
+                document.getElementById("label_time3").innerHTML = time;
+      	        break;
+      	      case "highest_temp_f":
+      	        var data = msg.data;
+                var time = msg.time;
+                document.getElementById("message4").value = data;
+                document.getElementById("label_time4").innerHTML = time;
+      	        break;
+      	      case "highest_hum":
+      	        var data = msg.data;
+                var time = msg.time;
+                document.getElementById("message5").value = data;
+                document.getElementById("label_time5").innerHTML = time;
+      	        break;
+      	      case "average_temp_f":
+      	        var data = msg.data;
+                var time = msg.time;
+                document.getElementById("message6").value = data;
+                document.getElementById("label_time6").innerHTML = time;
+      	        break;
+      	      case "average_hum":
+      	        var data = msg.data;
+                var time = msg.time;
+                document.getElementById("message7").value = data;
+                document.getElementById("label_time7").innerHTML = time;
+      	        break;
+              default:
+              };
             };
  
           // Close Websocket callback
@@ -46,7 +120,14 @@
             $("#host").css("background", "#ff0000"); 
             $("#port").css("background", "#ff0000"); 
             $("#uri").css("background",  "#ff0000");
-            $("div#message_details").empty();
+            $("div#message_details").hide();
+            $("div#message_details1").hide();
+            $("div#message_details2").hide();
+            $("div#message_details3").hide();
+            $("div#message_details4").hide();
+            $("div#message_details5").hide();
+            $("div#message_details6").hide();
+            $("div#message_details7").hide();
  
             };
  
@@ -56,14 +137,96 @@
             $("#port").css("background", "#00ff00"); 
             $("#uri").css("background", "#00ff00");
             $("div#message_details").show();
+            $("div#message_details1").show();
+            $("div#message_details2").show();
+            $("div#message_details3").show();
+            $("div#message_details4").show();
+            $("div#message_details5").show();
+            $("div#message_details6").show();
+            $("div#message_details7").show();
             log("***Connection Opened***");
           };
         });
  
-        // Send websocket message function
+        // Send websocket message function with a type
         $("#send").click(function(evt) {
-            log("Sending Message: "+$("#message").val());
-            ws.send($("#message").val());
+            // Construct a msg object containing the data the server needs to process the message from the chat client.
+	    var msg = {
+	      type: "current_temp_f"
+	    };
+
+	    // Send the msg object as a JSON-formatted string.
+	    ws.send(JSON.stringify(msg));
+        });
+        // Send websocket message function with a type
+        $("#send1").click(function(evt) {
+            // Construct a msg object containing the data the server needs to process the message from the chat client.
+	    var msg = {
+	      type: "current_hum"
+	    };
+
+	    // Send the msg object as a JSON-formatted string.
+	    ws.send(JSON.stringify(msg));
+        });
+        // Send websocket message function with a type
+        $("#send2").click(function(evt) {
+            // Construct a msg object containing the data the server needs to process the message from the chat client.
+	    var msg = {
+	      type: "lowest_temp_f"
+	    };
+
+	    // Send the msg object as a JSON-formatted string.
+	    ws.send(JSON.stringify(msg));
+        });
+        // Send websocket message function with a type
+        $("#send3").click(function(evt) {
+            // Construct a msg object containing the data the server needs to process the message from the chat client.
+	    var msg = {
+	      type: "lowest_hum"
+	    };
+
+	    // Send the msg object as a JSON-formatted string.
+	    ws.send(JSON.stringify(msg));
+        });
+        // Send websocket message function with a type
+        $("#send4").click(function(evt) {
+            // Construct a msg object containing the data the server needs to process the message from the chat client.
+	    var msg = {
+	      type: "highest_temp_f"
+	    };
+
+	    // Send the msg object as a JSON-formatted string.
+	    ws.send(JSON.stringify(msg));
+        });
+        // Send websocket message function with a type
+        $("#send5").click(function(evt) {
+            // Construct a msg object containing the data the server needs to process the message from the chat client.
+	    var msg = {
+	      type: "highest_hum"
+	    };
+
+	    // Send the msg object as a JSON-formatted string.
+	    ws.send(JSON.stringify(msg));
+        });
+        // Send websocket message function with a type
+        $("#send6").click(function(evt) {
+            // Construct a msg object containing the data the server needs to process the message from the chat client.
+	    var msg = {
+	      type: "average_temp_f"
+	    };
+
+	    // Send the msg object as a JSON-formatted string.
+	    ws.send(JSON.stringify(msg));
+        });
+        // Send websocket message function with a type
+        $("#send7").click(function(evt) {
+            // Construct a msg object containing the data the server needs to process the message from the chat client.
+	    var msg = {
+	      type: "average_hum"
+	    };
+
+	    // Send the msg object as a JSON-formatted string.
+	    ws.send(JSON.stringify(msg));
         });
  
       });
@@ -71,21 +234,69 @@
   </head>
  
   <body>
-    <h1>WebSockets Hello World</h1>
+    <h1>Connect to your data!  Fill in the entries below:</h1>
     <div id="connection_details">
       <label for="host">host:</label>
-      <input type="text" id="host" value="localhost" style="background:#ff0000;"/><br />
+      <input type="text" id="host" value="192.168.0.73" style="background:#ff0000;"/><br />
       <label for="port">port:</label>
       <input type="text" id="port" value="8888" style="background:#ff0000;"/><br />
       <label for="uri">uri:</label>
       <input type="text" id="uri" value="/ws" style="background:#ff0000;"/><br />
       <input type="submit" id="open" value="open" />
     </div>
+    <div id="error_details">
+        </br></br>
+	<label id="label_error">Sensor Disconnected: </label><br />
+	<label id="label_error1">Cannot update Current Temp and Humidity</label><br />
+	<label id="label_error1">Please try again later</label><br />
+    </div>
     <div id="message_details">
         </br></br>
-        <label for="message">message:</label>
-        <input type="text" id="message" value="Hello World!"/><br />
-        <input type="submit" id="send" value="send" />
+        <input type="submit" id="send" value="Current Temp (*F)" />
+        <input type="text" id="message" value="Click the button!"/><br />
+	<label id="label_time"></label>
+    </div>
+    <div id="message_details1">
+        </br></br>
+        <input type="submit" id="send1" value="Current Hum %" />
+        <input type="text" id="message1" value="Click the button!"/><br />
+	<label id="label_time1"></label>
+    </div>
+    <div id="message_details2">
+        </br></br>
+        <input type="submit" id="send2" value="Lowest Temp (*F)" />
+        <input type="text" id="message2" value="Click the button!"/><br />
+	<label id="label_time2"></label>
+    </div>
+    <div id="message_details3">
+        </br></br>
+        <input type="submit" id="send3" value="Lowest Hum %" />
+        <input type="text" id="message3" value="Click the button!"/><br />
+	<label id="label_time3"></label>
+    </div>
+    <div id="message_details4">
+        </br></br>
+        <input type="submit" id="send4" value="Highest Temp (*F)" />
+        <input type="text" id="message4" value="Click the button!"/><br />
+	<label id="label_time4"></label>
+    </div>
+    <div id="message_details5">
+        </br></br>
+        <input type="submit" id="send5" value="Highest Hum %" />
+        <input type="text" id="message5" value="Click the button!"/><br />
+	<label id="label_time5"></label>
+    </div>
+    <div id="message_details6">
+        </br></br>
+        <input type="submit" id="send6" value="Average Temp (*F)" />
+        <input type="text" id="message6" value="Click the button!"/><br />
+	<label id="label_time6"></label>
+    </div>
+    <div id="message_details7">
+        </br></br>
+        <input type="submit" id="send7" value="Average Hum %" />
+        <input type="text" id="message7" value="Click a button!"/><br />
+	<label id="label_time7"></label>
     </div>
     <div id="terminal">
         
