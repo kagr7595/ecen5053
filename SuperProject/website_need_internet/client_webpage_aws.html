@@ -1,0 +1,141 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html>
+	<head>
+		<title>Gate Client</title>
+		<script type="text/javascript" src="jscharts.js"></script>
+		<script type="text/javascript" src="http://www.jscharts.js"></script>
+		<meta charset="utf-8" />
+		<style type="text/css">
+			body {
+				text-align: center;
+				min-width: 500px;
+			}
+			chartid {
+			text-align: center;
+			min-width: 500px;
+			}
+		</style>
+	</head>
+
+	<body>
+		<h1>Gate Client Application:</h1>
+		<div id="update_button">
+			<button class="btn default" onClick="button_update">UPDATE</button>
+		</div>
+		<div id="currentStatusOpen" style="display:none;">
+			<label for="status"><font size="6" color="black">Status:</font>
+			<label for="status1"><font size="6" color="green">   OPEN</font></label><br></br>
+			<label for="statusTime">Last Status Change Timestamp: </label><label for="lastStatusTimeOpen"> </label><br></br>
+			<label for="status2"><font size="3" color="black">     ---Option to---</font></label>
+			</label><button class="btn default" onClick="button_gate">CLOSE GATE</button>
+		</div>
+		<div id="currentStatusClosed" style="display:none;">
+			<label for="status"><font size="6" color="black">Status:</font>
+			<label for="status1"><font size="6" color="red">   CLOSED</font></label><br></br>
+			<label for="statusTime">Last Status Change Timestamp: </label><label for="lastStatusTimeOpen"> </label><br></br>
+		</div>
+		<div id="currentStatusInitalState">
+			<br></br><label for="status">Status:    </label><br></br>
+			<label for="statusTime">Last Status Change Timestamp: </label>
+		</div>
+		<div id="chart_wrapper" style="display:inline-none">
+			<div id="chartid" style="text-align:center; float:left;">
+			</div>
+			<div id="update_button">
+				<button class="btn default" onClick="button_today">Today</button>
+				<button class="btn default" onClick="button_day2">Past 2 Days</button>
+				<button class="btn default" onClick="button_week">Past Week</button>
+			</div>	
+		</div>
+		<div id="update_button">
+			<br></br>
+			<br></br>
+			<p id="result">There can be a 5 min delay for receiving updates from RPiServer1</p>
+			<p id="result1">Please wait and try again a few minutes later if results are not as expected</p>
+		</div>
+	
+		<script src="https://sdk.amazonaws.com/js/aws-sdk-2.267.1.min.js"></script>
+		<script type="text/javascript">
+			var divOpen = document.getElementById("currentStatusOpen");
+			divOpen.style.display = "none";
+			var divClosed = document.getElementById("currentStatusClosed");
+			divClosed.style.display = "none";
+			var divInitial = document.getElementById("currentStatusInitalState");
+			divInitial.style.display = "block";
+			var divChart = document.getElementById("chart_wrapper");
+			divChart.style.display = "none";
+
+			// Variables so that I can keep the data I need as I go along
+			var self_queueurl;
+			var self_queuename = 'StandardQueue';
+			var self_snstopic_server = "RPiServer1"
+			var self_snstopic_client = "RPiClient1"
+			var current_data_timestamp;
+			
+			/*  Credentials for AWS   */
+			// Initialize the Amazon Cognito credentials provider -- This one is set up for unauthenticated
+			AWS.config.region = 'us-east-1'; // Region
+			AWS.config.credentials = new AWS.CognitoIdentityCredentials({
+				IdentityPoolId: 'us-east-1:dee3b8d2-8c0d-4196-af8b-0eedf0a400b6'
+			});
+
+			/*  SNS   */
+			// Create promise and SNS service object
+			var createTopicPromise = new AWS.SNS({apiVersion: '2010-03-31'}).createTopic({Name: self_snstopic_client}).promise();
+			
+			// Handle promise's fulfilled/rejected states
+			createTopicPromise.then(
+				function(data) {
+				console.log("Topic ARN is " + data.TopicArn);
+				console.log("Topic data is " + data);
+			}).catch(
+				function(err) {
+				console.error(err, err.stack);
+			});
+
+			// Create promise and SNS service object
+			var listTopicsPromise = new AWS.SNS({apiVersion: '2010-03-31'}).listTopics({}).promise();
+			
+			// handle promise's fulfilled/rejected states
+			listTopicsPromise.then(
+				function(data) {
+				console.log(data.Topics);
+			}).catch(
+				function(err) {
+				console.error(err, err.stack);
+			});
+
+			
+			/*  SQS   */
+			// Create SQS service object
+			var sqs = new AWS.SQS({apiVersion: '2012-11-05'});
+			
+			var params = {
+				QueueName: 'StandardQueue'
+			};
+			
+			//Get Queue Url given a QueueName
+			sqs.getQueueUrl(params, function(err, data) {
+				if (err) {
+					console.log("Error", err);
+				} else {
+					console.log("Success", data.QueueUrl);
+			
+				}
+			});
+			
+			//JSChart is used to create Graph -- see [____]
+			var myData = new Array(['2005', 2], ['2006', 1], ['2007', 3], ['2008', 6]);
+			var myChart = new JSChart('chartid', 'bar');
+			myChart.setDataArray(myData);
+			myChart.setBarColor('#42aBdB');
+			myChart.setBarOpacity(0.8);
+			myChart.setBarBorderColor('#D9EDF7');
+			myChart.setBarValues(false);
+			myChart.setTitleColor('#8C8383');
+			myChart.setAxisColor('#777E81');
+			myChart.setAxisValuesColor('#777E81');
+			myChart.draw();
+		</script>
+    </body>
+</html>
