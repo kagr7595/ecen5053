@@ -69,7 +69,7 @@ class Ui_MainWindow(object):
         font.setFamily("DejaVu Math TeX Gyre")
         font.setPointSize(10)
         self.label_currentupdatetime = QtWidgets.QLabel(self.centralwidget)
-        self.label_currentupdatetime.setGeometry(QtCore.QRect(270, 250, 550, 20))
+        self.label_currentupdatetime.setGeometry(QtCore.QRect(190, 250, 550, 20))
         self.label_currentupdatetime.setFont(font)
         self.label_currentupdatetime.setObjectName("label_currentupdatetime")
         #self.label_currentupdatetime.setVisible(0)

@@ -71,8 +71,8 @@ GPIO.setup(18,GPIO.OUT)
 #create a connection to the localhost Redis server instance, by default it runs on port 6379
 redis_db = redis.StrictRedis(host="localhost", port=6379, db=0)
 
-#flush database
-redis_db.flushdb()
+#####flush database  #don't flush database so I can collect some data
+####redis_db.flushdb()
 
 # Custom MQTT message callback
 def customCallback(client, userdata, message):
@@ -202,13 +202,21 @@ class ProjectSuperProgram(Ui_MainWindow):
                     current_hour = current_datetime.time().hour()
                     seven_day_dict['day_array_hour_num_open'][current_hour] = seven_day_dict['day_array_hour_num_open'][current_hour] + 1
                     seven_day_dict['current_status']           = 1
+                    self.label_currentupdatevalue_open.setVisible(1)
+                    self.label_currentupdatevalue_closed.setVisible(0)
+                    self.pushButton_gate.setText("CLOSE GATE")
                 else:
                     print("Reed Switch closed")
                     seven_day_dict['current_status']           = 0
+                    self.label_currentupdatevalue_open.setVisible(0)
+                    self.label_currentupdatevalue_closed.setVisible(1)
+                    self.pushButton_gate.setText("OPEN GATE")
                     
                 seven_day_dict['current_timestamp']        = current_datetime
                 seven_day_dict['current_timestamp_str']    = current_datetime_str
                 
+                self.label_currentupdatetime.setText("Last Change: " + current_datetime_str)
+           
                 
             
             if((self.time_between_messages_sec > 240) | reset):
