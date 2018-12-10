@@ -20,6 +20,36 @@ from PyQt5.QtCore import QDate, QTime, Qt, QDateTime, QTimer
 #needed for the database[9]
 import redis
 import json
+#my created json dictionary
+from shared_classes import *
+
+empty_dict = dict(current_status=0,
+                  current_timestamp=0,
+                  current_timestamp_str="",
+                  day_num_open=0,
+                  day_array_hour_num_open=[0,0,0,0,0,0,0,0,0,0,0,0,
+                                           0,0,0,0,0,0,0,0,0,0,0,0],
+                  day2_num_open=0,
+                  day2_array_hour_num_open=[0,0,0,0,0,0,0,0,0,0,0,0,
+                                            0,0,0,0,0,0,0,0,0,0,0,0],
+                  day3_num_open=0,
+                  day3_array_hour_num_open=[0,0,0,0,0,0,0,0,0,0,0,0,
+                                            0,0,0,0,0,0,0,0,0,0,0,0],
+                  day4_num_open=0,
+                  day4_array_hour_num_open=[0,0,0,0,0,0,0,0,0,0,0,0,
+                                            0,0,0,0,0,0,0,0,0,0,0,0],
+                  day5_num_open=0,
+                  day5_array_hour_num_open=[0,0,0,0,0,0,0,0,0,0,0,0,
+                                            0,0,0,0,0,0,0,0,0,0,0,0],
+                  day6_num_open=0,
+                  day6_array_hour_num_open=[0,0,0,0,0,0,0,0,0,0,0,0,
+                                            0,0,0,0,0,0,0,0,0,0,0,0],
+                  day7_num_open=0,
+                  day7_array_hour_num_open=[0,0,0,0,0,0,0,0,0,0,0,0,
+                                            0,0,0,0,0,0,0,0,0,0,0,0])
+                  
+seven_day_dict = empty_dict
+current_dict = empty_dict
 
 #What board layout am I using
 GPIO.setmode(GPIO.BCM)
@@ -30,6 +60,11 @@ GPIO.setup(19,GPIO.IN)
 input = GPIO.input(19)
 prev_input = ~input
 
+#create a connection to the localhost Redis server instance, by default it runs on port 6379
+redis_db = redis.StrictRedis(host="localhost", port=6379, db=0)
+
+#flush database
+redis_db.flushdb()
 
 # Custom MQTT message callback
 def customCallback(client, userdata, message):
@@ -65,13 +100,10 @@ myMQTTClient.configureConnectDisconnectTimeout(10)  # 10 sec
 myMQTTClient.configureMQTTOperationTimeout(5)  # 5 sec
 
 
-#myMQTTClient.connect()
-#myMQTTClient.subscribe(server_topic, 1, customCallback)
-#myMQTTClient.subscribe(client_topic, 1, customCallback)
-#myMQTTClient.unsubscribe(server_topic)
-#myMQTTClient.disconnect()
 last_connected_datetime = QDateTime.currentDateTime()
 time_between_messages_sec = 0
+send_message_new_day = 0
+new_day_countdown = 1
 
 # Loop forever
 # Check for change in reedswitch, if change then publish a message with the updated redis information
@@ -81,34 +113,88 @@ while True:
     #take a reading from RPi
     input = GPIO.input(19)
 
+    if((new_day_countdown < 0) | reset):
+        if(new_day_countdown < 0):
+            #move data in dictionaries
+            get_redis_current()
+            move_day_data()
+            
+        current_datetime = QDateTime.currentDateTime()
+        current_datetime_str = current_datetime.toString(Qt.DefaultLocaleLongDate)
+        tomorrow_datetime = current_datetime.addDays(1)
+        tomorrow_datetime_00 = QDateTime(QDate(tomorrow_datetime.date().year(), tomorrow_datetime.date().month(), tomorrow_datetime.date().day()), QTime(0,0))
+        new_day_countdown = current_datetime.secsTo(tomorrow_datetime_00)
+        print('seconds until new day: %d\n' % (new_day_countdown))
+        
+        #send a new message after moving all the data
+        send_message_new_day = 1
+        
+    #For Debug
+    ##print('send_message_new_day: %d\ninput: %d\nprev_input: %d\nreset: %d\n ' % (send_message_new_day, input, prev_input, reset))
+    
     #if last reading was low and this one high, print and send message
-    if(input != prev_input):        
+    if((input != prev_input) | send_message_new_day):        
         #get current datetime / Used [6] for reference
         current_datetime = QDateTime.currentDateTime()
         current_datetime_str = current_datetime.toString(Qt.DefaultLocaleLongDate)
+        tomorrow_datetime = current_datetime.addDays(1)
+        tomorrow_datetime_00 = QDateTime(QDate(tomorrow_datetime.date().year(), tomorrow_datetime.date().month(), tomorrow_datetime.date().day()), QTime(0,0))
+        new_day_countdown = current_datetime.secsTo(tomorrow_datetime_00)
+        print('seconds until new day: %d\n' % (new_day_countdown))
+        
         if(reset == 0):
+            #no true previous time between messages when reset
             time_between_messages_sec = last_connected_datetime.secsTo(current_datetime)
             print('Seconds between messages: %d\n' % (time_between_messages_sec))
+
+        if(input != prev_input):
+            #update the dictionary (and database)
+            #get_redis_current() ## This updates the seven_day_dict
+
+            #Is the gate open or closed?  If closed, no need to update num_open fields
+            if(input == 0):
+                #Open        
+                print("Reed Switch open")        
+                seven_day_dict['day_num_open']             = seven_day_dict['day_num_open'] + 1
+                current_hour = current_datetime.time().hour()
+                seven_day_dict['day_array_hour_num_open'][current_hour] = seven_day_dict['day_array_hour_num_open'][current_hour] + 1
+                seven_day_dict['current_status']           = 1
+            else:
+                print("Reed Switch closed")
+                seven_day_dict['current_status']           = 0
+                
+            seven_day_dict['current_timestamp']        = current_datetime
+            seven_day_dict['current_timestamp_str']    = current_datetime_str
+            
             
         
         if((time_between_messages_sec > 240) | reset):
             #try reconnecting as you may have been disconnected
             #connect and subscribe
             myMQTTClient.connect()
-            myMQTTClient.subscribe(server_topic, 1, customCallback)
-            myMQTTClient.subscribe(client_topic, 1, customCallback)
-            
+            ##myMQTTClient.subscribe(server_topic, 1, customCallback)
+            ##myMQTTClient.subscribe(client_topic, 1, customCallback)
+
+
+        #MESSAGE CREATION    
         message = {}
-        if(input == 1):
-            print("Reed Switch closed")
-            message['message'] = "Reed Switch Closed -- Gate Closed!"
-            message['status'] = 0
-        else:
-            print("Reed Switch open")
-            message['message'] = "Reed Switch Open -- Gate Open!"
-            message['status'] = 1
-        prev_input = input
-        
+        message['current_status']           = seven_day_dict['current_status']
+        message['current_timestamp_str']    = seven_day_dict['current_timestamp_str']
+        message['day_num_open']             = seven_day_dict['day_num_open']
+        message['day_array_hour_num_open']  = seven_day_dict['day_array_hour_num_open']
+        message['day2_num_open']            = seven_day_dict['day2_num_open']
+        message['day2_array_hour_num_open'] = seven_day_dict['day2_array_hour_num_open']
+        message['day3_num_open']            = seven_day_dict['day3_num_open']
+        message['day3_array_hour_num_open'] = seven_day_dict['day3_array_hour_num_open']
+        message['day4_num_open']            = seven_day_dict['day4_num_open']
+        message['day4_array_hour_num_open'] = seven_day_dict['day4_array_hour_num_open']
+        message['day5_num_open']            = seven_day_dict['day5_num_open']
+        message['day5_array_hour_num_open'] = seven_day_dict['day5_array_hour_num_open']
+        message['day6_num_open']            = seven_day_dict['day6_num_open']
+        message['day6_array_hour_num_open'] = seven_day_dict['day6_array_hour_num_open']
+        message['day7_num_open']            = seven_day_dict['day7_num_open']
+        message['day7_array_hour_num_open'] = seven_day_dict['day7_array_hour_num_open']
+        message['datetime'] = [current_datetime.date().year(), current_datetime.date().month(), current_datetime.date().day(), current_datetime.time().hour(), current_datetime.time().minute(), current_datetime.time().second()]
         message['sequence'] = loopCount
         message['program_reset'] = reset
         messageJson = json.dumps(message)
@@ -118,11 +204,60 @@ while True:
 
         last_connected_datetime = current_datetime
         reset = 0
+        print('datetime array: %s' % (message['datetime']))
     
-    
+    prev_input = input
     time.sleep(1)
+    new_day_countdown = new_day_countdown - 1
+    send_message_new_day = 0
 
 
 
 #don't need to disconnect as it is likely it will disconnect with the long waits in any case
 #myMQTTClient.disconnect()
+
+
+
+#Write to database -- 'current' is rewritten every time
+#as all data I want to keep for the seven days is in this dictionary
+def dict_redis(self, currentdict):
+
+    #change dictionary into P_dict object[11]
+    p = P_dict(**currentdict)
+
+    #change to a string via json
+    p_string = p.serialize()
+    
+    #send to redis
+    redis_db.set('current', p_string)
+
+
+#Retrieve 'current' dictionary from database
+def get_redis_current(self):
+    if(redis_db.exists('current') == False):
+        seven_day_dict = empty_dict
+    else:
+        lval = redis_db.get('current')
+        v1 = lval.decode()
+        v = json.loads(v1)
+        seven_day_dict = P_dict(**v)
+
+#Update data when midnight occurs (new day)
+def move_day_data(self):
+    seven_day_dict['day7_array_hour_num_open'] = seven_day_dict['day6_array_hour_num_open']
+    seven_day_dict['day7_num_open']            = seven_day_dict['day6_num_open']
+    seven_day_dict['day6_array_hour_num_open'] = seven_day_dict['day5_array_hour_num_open']
+    seven_day_dict['day6_num_open']            = seven_day_dict['day5_num_open']
+    seven_day_dict['day5_array_hour_num_open'] = seven_day_dict['day4_array_hour_num_open']
+    seven_day_dict['day5_num_open']            = seven_day_dict['day4_num_open']
+    seven_day_dict['day4_array_hour_num_open'] = seven_day_dict['day3_array_hour_num_open']
+    seven_day_dict['day4_num_open']            = seven_day_dict['day3_num_open']
+    seven_day_dict['day3_array_hour_num_open'] = seven_day_dict['day2_array_hour_num_open']
+    seven_day_dict['day3_num_open']            = seven_day_dict['day2_num_open']
+    seven_day_dict['day2_array_hour_num_open'] = seven_day_dict['day_array_hour_num_open']
+    seven_day_dict['day2_num_open']            = seven_day_dict['day_num_open']
+    seven_day_dict['day_array_hour_num_open']  = empty_dict['day_array_hour_num_open']
+    seven_day_dict['day_num_open']             = empty_dict['day_num_open']
+    seven_day_dict['current_status']           = 0
+    seven_day_dict['current_timestamp']        = current_datetime
+    seven_day_dict['current_timestamp_str']    = current_datetime_str
