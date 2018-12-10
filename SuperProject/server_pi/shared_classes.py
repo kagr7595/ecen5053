@@ -18,10 +18,7 @@ class P_dict(object):
     def show_current_status(self):
         #This is whether the gate is open or closed (open = 1)
         return self.current_status
-    
-    def show_current_timestamp(self):
-        return self.current_timestamp
-    
+        
     def show_current_timestamp_str(self):
         return self.current_timestamp_str
     
@@ -77,7 +74,6 @@ class P_dict(object):
 
     def print_obj(self):
         print('current_status: ', self.current_status)
-        print('current_timestamp: ', self.current_timestamp)
         print('current_timestamp_str: ', self.current_timestamp_str)
         print('day_num_open: ', self.day_num_open)
         print('day_array_hour_num_open: ', self.day_array_hour_num_open)

@@ -29,33 +29,6 @@ import json
 #my created json dictionary
 from shared_classes import *
 
-empty_dict = dict(current_status=0,
-                  current_timestamp=0,
-                  current_timestamp_str="",
-                  day_num_open=0,
-                  day_array_hour_num_open=[0,0,0,0,0,0,0,0,0,0,0,0,
-                                           0,0,0,0,0,0,0,0,0,0,0,0],
-                  day2_num_open=0,
-                  day2_array_hour_num_open=[0,0,0,0,0,0,0,0,0,0,0,0,
-                                            0,0,0,0,0,0,0,0,0,0,0,0],
-                  day3_num_open=0,
-                  day3_array_hour_num_open=[0,0,0,0,0,0,0,0,0,0,0,0,
-                                            0,0,0,0,0,0,0,0,0,0,0,0],
-                  day4_num_open=0,
-                  day4_array_hour_num_open=[0,0,0,0,0,0,0,0,0,0,0,0,
-                                            0,0,0,0,0,0,0,0,0,0,0,0],
-                  day5_num_open=0,
-                  day5_array_hour_num_open=[0,0,0,0,0,0,0,0,0,0,0,0,
-                                            0,0,0,0,0,0,0,0,0,0,0,0],
-                  day6_num_open=0,
-                  day6_array_hour_num_open=[0,0,0,0,0,0,0,0,0,0,0,0,
-                                            0,0,0,0,0,0,0,0,0,0,0,0],
-                  day7_num_open=0,
-                  day7_array_hour_num_open=[0,0,0,0,0,0,0,0,0,0,0,0,
-                                            0,0,0,0,0,0,0,0,0,0,0,0])
-                  
-seven_day_dict = empty_dict
-current_dict = empty_dict
 
 #What board layout am I using
 GPIO.setmode(GPIO.BCM)
@@ -123,6 +96,33 @@ class ProjectSuperProgram(Ui_MainWindow):
     def __init__(self, window):
         Ui_MainWindow.__init__(self)
         self.setupUi(window)
+
+        self.empty_dict = P_dict(current_status=0,
+                  current_timestamp_str="",
+                  day_num_open=0,
+                  day_array_hour_num_open=[0,0,0,0,0,0,0,0,0,0,0,0,
+                                           0,0,0,0,0,0,0,0,0,0,0,0],
+                  day2_num_open=0,
+                  day2_array_hour_num_open=[0,0,0,0,0,0,0,0,0,0,0,0,
+                                            0,0,0,0,0,0,0,0,0,0,0,0],
+                  day3_num_open=0,
+                  day3_array_hour_num_open=[0,0,0,0,0,0,0,0,0,0,0,0,
+                                            0,0,0,0,0,0,0,0,0,0,0,0],
+                  day4_num_open=0,
+                  day4_array_hour_num_open=[0,0,0,0,0,0,0,0,0,0,0,0,
+                                            0,0,0,0,0,0,0,0,0,0,0,0],
+                  day5_num_open=0,
+                  day5_array_hour_num_open=[0,0,0,0,0,0,0,0,0,0,0,0,
+                                            0,0,0,0,0,0,0,0,0,0,0,0],
+                  day6_num_open=0,
+                  day6_array_hour_num_open=[0,0,0,0,0,0,0,0,0,0,0,0,
+                                            0,0,0,0,0,0,0,0,0,0,0,0],
+                  day7_num_open=0,
+                  day7_array_hour_num_open=[0,0,0,0,0,0,0,0,0,0,0,0,
+                                            0,0,0,0,0,0,0,0,0,0,0,0])
+                  
+        self.seven_day_dict = self.empty_dict
+        
         #reset
         reset_program = 1
         self.main_program(reset_program)
@@ -192,31 +192,32 @@ class ProjectSuperProgram(Ui_MainWindow):
 
             if(input != self.prev_input):
                 #update the dictionary (and database)
-                self.get_redis_current() ## This updates the seven_day_dict
+                self.get_redis_current() ## This updates the self.seven_day_dict
+                #self.seven_day_dict.print_obj()
 
                 #Is the gate open or closed?  If closed, no need to update num_open fields
                 if(input == 0):
                     #Open        
                     print("Reed Switch open")        
-                    seven_day_dict['day_num_open']             = seven_day_dict['day_num_open'] + 1
+                    self.seven_day_dict.day_num_open             = self.seven_day_dict.day_num_open + 1
                     current_hour = current_datetime.time().hour()
-                    seven_day_dict['day_array_hour_num_open'][current_hour] = seven_day_dict['day_array_hour_num_open'][current_hour] + 1
-                    seven_day_dict['current_status']           = 1
+                    self.seven_day_dict.day_array_hour_num_open[current_hour] = self.seven_day_dict.day_array_hour_num_open[current_hour] + 1
+                    self.seven_day_dict.current_status           = 1
                     self.label_currentupdatevalue_open.setVisible(1)
                     self.label_currentupdatevalue_closed.setVisible(0)
                     self.pushButton_gate.setText("CLOSE GATE")
                 else:
                     print("Reed Switch closed")
-                    seven_day_dict['current_status']           = 0
+                    self.seven_day_dict.current_status              = 0
                     self.label_currentupdatevalue_open.setVisible(0)
                     self.label_currentupdatevalue_closed.setVisible(1)
                     self.pushButton_gate.setText("OPEN GATE")
                     
-                seven_day_dict['current_timestamp']        = current_datetime
-                seven_day_dict['current_timestamp_str']    = current_datetime_str
+                self.seven_day_dict.current_timestamp_str    = current_datetime_str
                 
                 self.label_currentupdatetime.setText("Last Change: " + current_datetime_str)
-           
+                self.dict_redis(self.seven_day_dict)
+                #self.seven_day_dict.print_obj()
                 
             
             if((self.time_between_messages_sec > 240) | reset):
@@ -229,22 +230,22 @@ class ProjectSuperProgram(Ui_MainWindow):
 
             #MESSAGE CREATION    
             message = {}
-            message['current_status']           = seven_day_dict['current_status']
-            message['current_timestamp_str']    = seven_day_dict['current_timestamp_str']
-            message['day_num_open']             = seven_day_dict['day_num_open']
-            message['day_array_hour_num_open']  = seven_day_dict['day_array_hour_num_open']
-            message['day2_num_open']            = seven_day_dict['day2_num_open']
-            message['day2_array_hour_num_open'] = seven_day_dict['day2_array_hour_num_open']
-            message['day3_num_open']            = seven_day_dict['day3_num_open']
-            message['day3_array_hour_num_open'] = seven_day_dict['day3_array_hour_num_open']
-            message['day4_num_open']            = seven_day_dict['day4_num_open']
-            message['day4_array_hour_num_open'] = seven_day_dict['day4_array_hour_num_open']
-            message['day5_num_open']            = seven_day_dict['day5_num_open']
-            message['day5_array_hour_num_open'] = seven_day_dict['day5_array_hour_num_open']
-            message['day6_num_open']            = seven_day_dict['day6_num_open']
-            message['day6_array_hour_num_open'] = seven_day_dict['day6_array_hour_num_open']
-            message['day7_num_open']            = seven_day_dict['day7_num_open']
-            message['day7_array_hour_num_open'] = seven_day_dict['day7_array_hour_num_open']
+            message['current_status']           = self.seven_day_dict.current_status
+            message['current_timestamp_str']    = self.seven_day_dict.current_timestamp_str
+            message['day_num_open']             = self.seven_day_dict.day_num_open
+            message['day_array_hour_num_open']  = self.seven_day_dict.day_array_hour_num_open
+            message['day2_num_open']            = self.seven_day_dict.day2_num_open
+            message['day2_array_hour_num_open'] = self.seven_day_dict.day2_array_hour_num_open
+            message['day3_num_open']            = self.seven_day_dict.day3_num_open
+            message['day3_array_hour_num_open'] = self.seven_day_dict.day3_array_hour_num_open
+            message['day4_num_open']            = self.seven_day_dict.day4_num_open
+            message['day4_array_hour_num_open'] = self.seven_day_dict.day4_array_hour_num_open
+            message['day5_num_open']            = self.seven_day_dict.day5_num_open
+            message['day5_array_hour_num_open'] = self.seven_day_dict.day5_array_hour_num_open
+            message['day6_num_open']            = self.seven_day_dict.day6_num_open
+            message['day6_array_hour_num_open'] = self.seven_day_dict.day6_array_hour_num_open
+            message['day7_num_open']            = self.seven_day_dict.day7_num_open
+            message['day7_array_hour_num_open'] = self.seven_day_dict.day7_array_hour_num_open
             message['datetime'] = [current_datetime.date().year(), current_datetime.date().month(), current_datetime.date().day(), current_datetime.time().hour(), current_datetime.time().minute(), current_datetime.time().second()]
             message['sequence'] = self.loopCount
             message['program_reset'] = reset
@@ -266,11 +267,8 @@ class ProjectSuperProgram(Ui_MainWindow):
     #as all data I want to keep for the seven days is in this dictionary
     def dict_redis(self, currentdict):
 
-        #change dictionary into P_dict object[11]
-        p = P_dict(**currentdict)
-
         #change to a string via json
-        p_string = p.serialize()
+        p_string = currentdict.serialize()
         
         #send to redis
         redis_db.set('current', p_string)
@@ -281,34 +279,36 @@ class ProjectSuperProgram(Ui_MainWindow):
     #Retrieve 'current' dictionary from database
     def get_redis_current(self):
         if(redis_db.exists('current') == False):
-            seven_day_dict = empty_dict
+            print("FALSE")
+            self.seven_day_dict = empty_dict
         else:
+            print("TRUE")
             lval = redis_db.get('current')
             v1 = lval.decode()
             v = json.loads(v1)
-            seven_day_dict = P_dict(**v)
+            self.seven_day_dict = P_dict(**v)
+            #self.seven_day_dict.print_obj()
 
 
     ##########################################################################################
     #Update data when midnight occurs (new day)
     def move_day_data(self):
-        seven_day_dict['day7_array_hour_num_open'] = seven_day_dict['day6_array_hour_num_open']
-        seven_day_dict['day7_num_open']            = seven_day_dict['day6_num_open']
-        seven_day_dict['day6_array_hour_num_open'] = seven_day_dict['day5_array_hour_num_open']
-        seven_day_dict['day6_num_open']            = seven_day_dict['day5_num_open']
-        seven_day_dict['day5_array_hour_num_open'] = seven_day_dict['day4_array_hour_num_open']
-        seven_day_dict['day5_num_open']            = seven_day_dict['day4_num_open']
-        seven_day_dict['day4_array_hour_num_open'] = seven_day_dict['day3_array_hour_num_open']
-        seven_day_dict['day4_num_open']            = seven_day_dict['day3_num_open']
-        seven_day_dict['day3_array_hour_num_open'] = seven_day_dict['day2_array_hour_num_open']
-        seven_day_dict['day3_num_open']            = seven_day_dict['day2_num_open']
-        seven_day_dict['day2_array_hour_num_open'] = seven_day_dict['day_array_hour_num_open']
-        seven_day_dict['day2_num_open']            = seven_day_dict['day_num_open']
-        seven_day_dict['day_array_hour_num_open']  = empty_dict['day_array_hour_num_open']
-        seven_day_dict['day_num_open']             = empty_dict['day_num_open']
-        seven_day_dict['current_status']           = 0
-        seven_day_dict['current_timestamp']        = current_datetime
-        seven_day_dict['current_timestamp_str']    = current_datetime_str
+        self.seven_day_dict.day7_array_hour_num_open = self.seven_day_dict.day6_array_hour_num_open
+        self.seven_day_dict.day7_num_open            = self.seven_day_dict.day6_num_open
+        self.seven_day_dict.day6_array_hour_num_open = self.seven_day_dict.day5_array_hour_num_open
+        self.seven_day_dict.day6_num_open            = self.seven_day_dict.day5_num_open
+        self.seven_day_dict.day5_array_hour_num_open = self.seven_day_dict.day4_array_hour_num_open
+        self.seven_day_dict.day5_num_open            = self.seven_day_dict.day4_num_open
+        self.seven_day_dict.day4_array_hour_num_open = self.seven_day_dict.day3_array_hour_num_open
+        self.seven_day_dict.day4_num_open            = self.seven_day_dict.day3_num_open
+        self.seven_day_dict.day3_array_hour_num_open = self.seven_day_dict.day2_array_hour_num_open
+        self.seven_day_dict.day3_num_open            = self.seven_day_dict.day2_num_open
+        self.seven_day_dict.day2_array_hour_num_open = self.seven_day_dict.day_array_hour_num_open
+        self.seven_day_dict.day2_num_open            = self.seven_day_dict.day_num_open
+        self.seven_day_dict.day_array_hour_num_open  = self.empty_dict.day_array_hour_num_open
+        self.seven_day_dict.day_num_open             = self.empty_dict.day_num_open
+        self.seven_day_dict.current_status           = 0
+        self.seven_day_dict.current_timestamp_str    = current_datetime_str
 
 
     ##########################################################################################
