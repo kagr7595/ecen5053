@@ -11,43 +11,47 @@
 				min-width: 500px;
 			}
 			chartid {
-			text-align: center;
-			min-width: 500px;
+				text-align: center;
+				min-width: 1000px;
 			}
 		</style>
 	</head>
 
 	<body>
-		<h1>Gate Client Application:</h1>
+		<h1>Gate Client Website</h1>
 		<div id="update_button">
-			<button class="btn default" onClick="button_update">UPDATE</button>
+			<button class="btn default" onClick="button_update_message();">UPDATE</button>
 		</div>
 		<div id="currentStatusOpen" style="display:none;">
 			<label for="status"><font size="6" color="black">Status:</font>
 			<label for="status1"><font size="6" color="green">   OPEN</font></label><br></br>
-			<label for="statusTime">Last Status Change Timestamp: </label><label for="lastStatusTimeOpen"> </label><br></br>
+<!--			<label for="statusTime">Last Status Changed: </label><label id="lastStatusTimeOpenO"> </label><br></br>
 			<label for="status2"><font size="3" color="black">     ---Option to---</font></label>
 			</label><button class="btn default" onClick="button_gate">CLOSE GATE</button>
+-->
 		</div>
 		<div id="currentStatusClosed" style="display:none;">
 			<label for="status"><font size="6" color="black">Status:</font>
 			<label for="status1"><font size="6" color="red">   CLOSED</font></label><br></br>
-			<label for="statusTime">Last Status Change Timestamp: </label><label for="lastStatusTimeOpen"> </label><br></br>
+<!--			<label for="statusTime">Last Status Changed: </label><label id="lastStatusTimeOpenC"> </label><br></br>
+-->
 		</div>
 		<div id="currentStatusInitalState">
 			<br></br><label for="status">Status:    </label><br></br>
-			<label for="statusTime">Last Status Change Timestamp: </label>
+<!--			<label for="statusTime">Last Status Changed: </label>
+-->
 		</div>
+		<p id="lastStatusTimeOpen">... </p><br></br>
 		<div id="chart_wrapper" style="display:inline-none">
 			<div id="chartid" style="text-align:center; float:left;">
 			</div>
-			<div id="update_button">
-				<button class="btn default" onClick="button_today">Today</button>
-				<button class="btn default" onClick="button_day2">Past 2 Days</button>
-				<button class="btn default" onClick="button_week">Past Week</button>
+			<div id="update_button_graph">
+				<button class="btn default" onClick="button_today();">Today</button>
+				<button class="btn default" onClick="button_day3();">Past 3 Days</button>
+				<button class="btn default" onClick="button_week();">Past Week</button>
 			</div>	
 		</div>
-		<div id="update_button">
+		<div id="knowledge">
 			<br></br>
 			<br></br>
 			<p id="result">There can be a 5 min delay for receiving updates from RPiServer1</p>
@@ -56,6 +60,7 @@
 	
 		<script src="https://sdk.amazonaws.com/js/aws-sdk-2.267.1.min.js"></script>
 		<script type="text/javascript">
+			// Heavily used https://github.com/awsdocs/aws-doc-sdk-examples/tree/master/javascript/example_code
 			var divOpen = document.getElementById("currentStatusOpen");
 			divOpen.style.display = "none";
 			var divClosed = document.getElementById("currentStatusClosed");
@@ -63,14 +68,14 @@
 			var divInitial = document.getElementById("currentStatusInitalState");
 			divInitial.style.display = "block";
 			var divChart = document.getElementById("chart_wrapper");
-			divChart.style.display = "none";
+			divChart.style.display = "inline-none";
 
 			// Variables so that I can keep the data I need as I go along
-			var self_queueurl;
-			var self_queuename = 'StandardQueue';
+			var self_queuename = 'Fifo_Queue.fifo';
 			var self_snstopic_server = "RPiServer1"
 			var self_snstopic_client = "RPiClient1"
-			var current_data_timestamp;
+			var current_message;
+			var current_chart_type = "DAY";
 			
 			/*  Credentials for AWS   */
 			// Initialize the Amazon Cognito credentials provider -- This one is set up for unauthenticated
@@ -80,18 +85,6 @@
 			});
 
 			/*  SNS   */
-			// Create promise and SNS service object
-			var createTopicPromise = new AWS.SNS({apiVersion: '2010-03-31'}).createTopic({Name: self_snstopic_client}).promise();
-			
-			// Handle promise's fulfilled/rejected states
-			createTopicPromise.then(
-				function(data) {
-				console.log("Topic ARN is " + data.TopicArn);
-				console.log("Topic data is " + data);
-			}).catch(
-				function(err) {
-				console.error(err, err.stack);
-			});
 
 			// Create promise and SNS service object
 			var listTopicsPromise = new AWS.SNS({apiVersion: '2010-03-31'}).listTopics({}).promise();
@@ -105,37 +98,175 @@
 				console.error(err, err.stack);
 			});
 
-			
+						
 			/*  SQS   */
-			// Create SQS service object
-			var sqs = new AWS.SQS({apiVersion: '2012-11-05'});
-			
-			var params = {
-				QueueName: 'StandardQueue'
-			};
-			
-			//Get Queue Url given a QueueName
-			sqs.getQueueUrl(params, function(err, data) {
-				if (err) {
-					console.log("Error", err);
-				} else {
-					console.log("Success", data.QueueUrl);
-			
+			var params_sqs = {
+					AttributeNames: [
+						"SentTimestamp"
+					],	
+					MaxNumberOfMessages: 10,
+					MessageAttributeNames: [
+						"All"
+					],
+					QueueUrl: 'https://sqs.us-east-1.amazonaws.com/918893548996/Fifo_Queue.fifo',
+					VisibilityTimeout: 20,
+					WaitTimeSeconds: 15
+				};
+				
+			button_update_message();
+			function button_update_message() {
+				var retry = 1;
+				var retry_num = 0;
+				for (var j = 0; j<3; j++) {
+					// Create promise and SQS service object
+					var createSQSReceivePromise = new AWS.SQS({apiVersion: '2012-11-05'}).receiveMessage(params_sqs).promise();
+					
+					// Handle promise's fulfilled/rejected states
+					createSQSReceivePromise.then(
+						function(data) {				
+						console.log("Message is " + data);
+						if(data.Messages.length > 0) {
+							console.log("Message number is " + data.Messages.length);
+							current_message = JSON.parse(data.Messages[data.Messages.length-1].Body);
+							console.log("Message is...", current_message);
+							if(current_message.current_status==1){
+								document.getElementById('lastStatusTimeOpen').innerHTML = "Last Status Changed: " + current_message.current_timestamp_str;
+								divOpen.style.display = "block";
+								divClosed.style.display = "none";
+								divInitial.style.display = "none";
+							} else {
+								divOpen.style.display = "none";
+								document.getElementById('lastStatusTimeOpen').innerHTML = "Last Status Changed: " + current_message.current_timestamp_str;
+								divClosed.style.display = "block";
+								divInitial.style.display = "none";	
+							}
+							//update graph
+							var res = graph_bar_chart(current_message, current_chart_type);
+							if(res != 2) {
+								divChart.style.display = "inline-block";		
+							}
+							
+							for(var i = 0; i<data.Messages.length-1; i++){
+								var deleteParams = {
+									QueueUrl: 'https://sqs.us-east-1.amazonaws.com/918893548996/Fifo_Queue.fifo',
+									ReceiptHandle: data.Messages[i].ReceiptHandle
+								};
+								var createSQSDeleteMessagePromise = new AWS.SQS({apiVersion: '2012-11-05'}).deleteMessage(deleteParams).promise();	
+								
+								// Handle promise's fulfilled/rejected states
+								createSQSDeleteMessagePromise.then(
+									function(data) {				
+									console.log("Message deleted", data);
+								}).catch(
+									function(err) {
+									console.log("Delete Error", err);
+									console.error(err, err.stack);
+								});			
+							}
+						}
+					}).catch(
+						function(err) {
+						console.error(err, err.stack);
+					});						
+					
 				}
-			});
+			}
 			
-			//JSChart is used to create Graph -- see [____]
-			var myData = new Array(['2005', 2], ['2006', 1], ['2007', 3], ['2008', 6]);
-			var myChart = new JSChart('chartid', 'bar');
-			myChart.setDataArray(myData);
-			myChart.setBarColor('#42aBdB');
-			myChart.setBarOpacity(0.8);
-			myChart.setBarBorderColor('#D9EDF7');
-			myChart.setBarValues(false);
-			myChart.setTitleColor('#8C8383');
-			myChart.setAxisColor('#777E81');
-			myChart.setAxisValuesColor('#777E81');
-			myChart.draw();
+			function button_today(){
+				graph_bar_chart("DAY");
+				current_chart_type = "DAY";
+			}
+			function button_day3(){
+				graph_bar_chart("DAY3");
+				current_chart_type = "DAY3";
+			}
+			function button_week(){
+				graph_bar_chart("WEEK");
+				current_chart_type = "WEEK";
+			}
+			
+			
+			function graph_bar_chart(type) { 
+				if(typeof current_message === 'undefined') {
+					return 2;
+				} else {
+					
+					//JSChart is used to create Graph -- see [____]					
+					var myChart = new JSChart('chartid', 'bar');
+					
+					
+					var month = current_message.datetime[1];
+					var year = current_message.datetime[0];
+					var str_day = String(month)  + "/" + String(current_message.datetime[2])   + "/" + String(year);
+					var str_day2 = String(month) + "/" + String(current_message.datetime[2]-1) + "/" + String(year);
+					var str_day3 = String(month) + "/" + String(current_message.datetime[2]-2) + "/" + String(year);
+					var str_day4 = String(month) + "/" + String(current_message.datetime[2]-3) + "/" + String(year);
+					var str_day5 = String(month) + "/" + String(current_message.datetime[2]-4) + "/" + String(year);
+					var str_day6 = String(month) + "/" + String(current_message.datetime[2]-5) + "/" + String(year);
+					var str_day7 = String(month) + "/" + String(current_message.datetime[2]-6) + "/" + String(year);
+					if(type == "WEEK") {
+						var myData = new Array(
+						[str_day,  current_message.day_num_open],
+						[str_day2, current_message.day2_num_open],
+						[str_day3, current_message.day3_num_open],
+						[str_day4, current_message.day4_num_open],
+						[str_day5, current_message.day5_num_open],
+						[str_day6, current_message.day6_num_open],
+						[str_day7, current_message.day7_num_open]
+						);						
+						myChart.setAxisNameX('DATE');
+						myChart.setTitle('Seven Day GATE OPENED History')
+					} else if(type == "DAY3") {
+						var myData = new Array(
+						[str_day,  current_message.day_num_open],
+						[str_day2, current_message.day2_num_open],
+						[str_day3, current_message.day3_num_open]
+						);		
+						myChart.setAxisNameX('DATE');
+						myChart.setTitle('Three Day GATE OPENED History')
+					} else {
+						var myData = new Array(
+						['12AM',  current_message.day_array_hour_num_open[0]],
+						['1AM',   current_message.day_array_hour_num_open[1]],
+						['2AM',   current_message.day_array_hour_num_open[2]],
+						['3AM',   current_message.day_array_hour_num_open[3]],
+						['4AM',   current_message.day_array_hour_num_open[4]],
+						['5AM',   current_message.day_array_hour_num_open[5]],
+						['6AM',   current_message.day_array_hour_num_open[6]],
+						['7AM',   current_message.day_array_hour_num_open[7]],
+						['8AM',   current_message.day_array_hour_num_open[8]],
+						['9AM',   current_message.day_array_hour_num_open[9]],
+						['10AM',  current_message.day_array_hour_num_open[10]],
+						['11AM',  current_message.day_array_hour_num_open[11]],
+						['12PM',  current_message.day_array_hour_num_open[12]],
+						['1PM',   current_message.day_array_hour_num_open[13]],
+						['2PM',   current_message.day_array_hour_num_open[14]],
+						['3PM',   current_message.day_array_hour_num_open[15]],
+						['4PM',   current_message.day_array_hour_num_open[16]],
+						['5PM',   current_message.day_array_hour_num_open[17]],
+						['6PM',   current_message.day_array_hour_num_open[18]],
+						['7PM',   current_message.day_array_hour_num_open[19]],
+						['8PM',   current_message.day_array_hour_num_open[20]],
+						['9PM',   current_message.day_array_hour_num_open[21]],
+						['10PM',  current_message.day_array_hour_num_open[22]],
+						['11PM',  current_message.day_array_hour_num_open[23]]
+						);		
+						myChart.setAxisNameX(str_day);
+						myChart.setTitle('Hourly GATE OPENED History')						
+					}
+					myChart.setAxisNameY('GATE OPENED');	
+					myChart.setDataArray(myData);
+					myChart.setBarColor('#42aBdB');
+					myChart.setBarOpacity(0.8);
+					myChart.setBarBorderColor('#D9EDF7');
+					myChart.setBarValues(false);
+					myChart.setTitleColor('#8C8383');
+					myChart.setAxisColor('#777E81');
+					myChart.setAxisValuesColor('#777E81');
+					myChart.setSize(900,600);
+					myChart.draw();
+				} 
+			}
 		</script>
     </body>
 </html>
