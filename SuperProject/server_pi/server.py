@@ -150,36 +150,51 @@ class ProjectSuperProgram(Ui_MainWindow):
             
             input = GPIO.input(19)
             self.prev_input = ~input
+            self.alert = 0
+            self.alert_message_sent = 0
         else:
             #take a reading from RPi
             input = GPIO.input(19)
+            #print('time between messages: %d\ninput: %d\ncurrent_status: %0d\nmessage sent: %0d\n' % (self.time_between_messages_sec, input, self.seven_day_dict.current_status, self.alert_message_sent ))
+            if((self.time_between_messages_sec >= 10*60) & ~input & self.seven_day_dict.current_status & ~self.alert_message_sent):
+                #Gate has been open for 5 minutes -- the granularity for cloudwatch metrics means the delay is guaranteed to get the person at least 10 minutes later
+                self.alert = 1
+            if(input):
+                #Gate is closed -- no alert
+                self.alert = 0
+                self.alert_message_sent = 0
 
         send_message_new_day = 0
+        
+        if((self.new_day_countdown < 0) | reset):                
+            current_datetime = QDateTime.currentDateTime()
+            self.current_datetime_str = current_datetime.toString(Qt.DefaultLocaleLongDate)
+            tomorrow_datetime = current_datetime.addDays(1)
+            tomorrow_datetime_00 = QDateTime(QDate(tomorrow_datetime.date().year(), tomorrow_datetime.date().month(), tomorrow_datetime.date().day()), QTime(0,0))
 
-        if((self.new_day_countdown < 0) | reset):
+            #Need current_datetime
             if(self.new_day_countdown < 0):
                 #move data in dictionaries
                 self.get_redis_current()
                 self.move_day_data()
+                self.dict_redis(self.seven_day_dict)
+                self.seven_day_dict.print_obj()
                 
-            current_datetime = QDateTime.currentDateTime()
-            current_datetime_str = current_datetime.toString(Qt.DefaultLocaleLongDate)
-            tomorrow_datetime = current_datetime.addDays(1)
-            tomorrow_datetime_00 = QDateTime(QDate(tomorrow_datetime.date().year(), tomorrow_datetime.date().month(), tomorrow_datetime.date().day()), QTime(0,0))
             self.new_day_countdown = current_datetime.secsTo(tomorrow_datetime_00)
             print('seconds until new day: %d\n' % (self.new_day_countdown))
-            
+                
             #send a new message after moving all the data
             send_message_new_day = 1
+            
             
         #For Debug
         ##print('send_message_new_day: %d\ninput: %d\nprev_input: %d\nreset: %d\n ' % (send_message_new_day, input, self.prev_input, reset))
         
         #if last reading was low and this one high, print and send message
-        if((input != self.prev_input) | send_message_new_day):        
+        if((input != self.prev_input) | send_message_new_day | (~self.alert_message_sent & self.alert)):        
             #get current datetime / Used [6] for reference
             current_datetime = QDateTime.currentDateTime()
-            current_datetime_str = current_datetime.toString(Qt.DefaultLocaleLongDate)
+            self.current_datetime_str = current_datetime.toString(Qt.DefaultLocaleLongDate)
             tomorrow_datetime = current_datetime.addDays(1)
             tomorrow_datetime_00 = QDateTime(QDate(tomorrow_datetime.date().year(), tomorrow_datetime.date().month(), tomorrow_datetime.date().day()), QTime(0,0))
             self.new_day_countdown = current_datetime.secsTo(tomorrow_datetime_00)
@@ -213,9 +228,9 @@ class ProjectSuperProgram(Ui_MainWindow):
                     self.label_currentupdatevalue_closed.setVisible(1)
                     self.pushButton_gate.setText("OPEN GATE")
                     
-                self.seven_day_dict.current_timestamp_str    = current_datetime_str
+                self.seven_day_dict.current_timestamp_str    = self.current_datetime_str
                 
-                self.label_currentupdatetime.setText("Last Change: " + current_datetime_str)
+                self.label_currentupdatetime.setText("Last Change: " + self.current_datetime_str)
                 self.dict_redis(self.seven_day_dict)
                 #self.seven_day_dict.print_obj()
                 
@@ -249,6 +264,7 @@ class ProjectSuperProgram(Ui_MainWindow):
             message['datetime'] = [current_datetime.date().year(), current_datetime.date().month(), current_datetime.date().day(), current_datetime.time().hour(), current_datetime.time().minute(), current_datetime.time().second()]
             message['sequence'] = self.loopCount
             message['program_reset'] = reset
+            message['alert'] = self.alert
             messageJson = json.dumps(message)
             myMQTTClient.publish(server_topic, messageJson, 1)
             print('Published topic %s: %s\n' % (server_topic, messageJson))
@@ -257,10 +273,14 @@ class ProjectSuperProgram(Ui_MainWindow):
             self.last_connected_datetime = current_datetime
             reset = 0
             print('datetime array: %s' % (message['datetime']))
+            if(self.alert):
+                self.alert_message_sent = 1
+            self.time_between_messages_sec = 0
         
         self.prev_input = input
         time.sleep(1)
         self.new_day_countdown = self.new_day_countdown - 1
+        self.time_between_messages_sec = self.time_between_messages_sec + 1
 
     ##########################################################################################
     #Write to database -- 'current' is rewritten every time
@@ -308,7 +328,7 @@ class ProjectSuperProgram(Ui_MainWindow):
         self.seven_day_dict.day_array_hour_num_open  = self.empty_dict.day_array_hour_num_open
         self.seven_day_dict.day_num_open             = self.empty_dict.day_num_open
         self.seven_day_dict.current_status           = 0
-        self.seven_day_dict.current_timestamp_str    = current_datetime_str
+        self.seven_day_dict.current_timestamp_str    = self.current_datetime_str
 
 
     ##########################################################################################
