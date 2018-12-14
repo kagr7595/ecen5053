@@ -1,17 +1,14 @@
 # V1.0
 # Author: Kathy Grimes
-# Last Edited: October 22, 2018
 
 ####General Project Description
-Remote Websocket/Web Page UI [1]
-This project runs on two RPi3s - one is the sensor, 
-the other is a client using a remote web-based display
-
-The project uses Project1 as a base and expands from it.
+Gate Reminder SuperProject
+See the Super_Project_Report.pdf in the Google Drive folder
 
 #Required Hardware for Project to run:
 (2) Raspberry Pi 3 (or 3+) running Raspbian Stretch
-(1) DHT22 Temperature/Humidity Sensor
+(1) Reed Sensor
+(1) LED
 (2) Keyboard/Mouse/Monitor(Remote Desktop with connection to Raspberry Pi 3)
 
 #Required Software installed on Raspbian Stretch:
@@ -29,23 +26,24 @@ Chromium-Browser (or browser of your choice)
 AWS connections and acount
 
 #Required Hardware install
-The DHT22 data pin must be connected to the GPIO 4 pin on the Raspberry Pi 3
-The DHT22 must have a 10kOhm resistor connected to pins 1 and 2
+Reed Sensor needs to be in a pull-up circuit and connected to pin 19
+LED needs a resistor and a connection to pin 18
 
 
 ####Project Requirements
 1. Server Raspberry Pi 3 B+
     - GUI is updated with Current gate status as well as Timestamp
     - Data is kept in a database (mine uses Redis DB and JSON for formatting)
-    - MQTT Websockets used between server AWS
+    - MQTT Websockets used between server and AWS
 2. Client Raspberry Pi 3 B or anything with an internet connection
     - HTML/JavaScript Webpage with:
 	- Graph (JS Charts)
 	- SQS (SNS was setup to be used but not integrated with the GUI - some information on console.log)
 	- QTGUI was set up for the python code but I couldn't get the fifo multi-message to work correctly
 	   - GUI has multiple grid formats and canvas layouts (This is where I spent too much time as I couldn't figure out how to do the graph portion correctly)
-3. Unfortunately AMQP/AWS MQ and Cloudwatch I didn't have time to work on.  I did have SNS working for the mid-report (please see videos I linked in slack) 
+3. Unfortunately AMQP/AWS MQ I didn't have time to work on -- just as I mentioned in the report design update.  I did have SNS working for the mid-report (please see videos I linked in slack) 
 SNS was in the html code, but I couldn't get it set up for the gate control button in time
+4. Cloudwatch is working in AWS and sends a text to my phone when an alert message is sent through MQTT and hits the Lambda function
 
 ####Project Additions
 
@@ -67,8 +65,10 @@ cd website_need_internet
 chromium-browser client_webpage_aws.html &
 Click on Update after there are some messages sent from server side.
 
-#Please take a look at the GUI I made for the client side pi even if I was unable to attach the client code.  
-ALL QT5 UI were completely done without the QT5 creator.
+#Please take a look at the GUI I made for the client side pi even if I was unable to attach the client code in time.  
+#ALL QT5 UI were completely done without the QT5 creator.
+cd client_pi
+python3 project_ui.py
 
 ####Citations
 
